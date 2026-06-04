@@ -8,50 +8,50 @@ import 'package:http/http.dart' as http;
 
 class LocationServices {
   final http.Client _client;
-  static const String defaultTargetUrl =
-      'https://httpbin.org/base64/eyJpZCI6IjAwMSIsInRhcmdldF9sYXQiOjEuMjY1LCJ0YXJnZXRfbG5nIjoxMDMuNjk1fQ==';
+  static const String defaultTargetUrl = 'https://httpbin.org/base64';
 
   LocationServices({http.Client? client}) : _client = client ?? http.Client();
+
+  Map<String, dynamic> _generateRandomData() {
+    final random = Random();
+    return {
+      'id': '001',
+      'target_lat': 1.265 + (random.nextDouble() - 0.5) * 0.1,
+      'target_lng': 103.695 + (random.nextDouble() - 0.5) * 0.1,
+    };
+  }
 
   Future<TargetLocation> fetchTargetLocation({
     String url = defaultTargetUrl,
   }) async {
-    final random = Random();
-    final double offsetLat = (random.nextDouble() - 0.5) * 0.1;
-    final double offsetLng = (random.nextDouble() - 0.5) * 0.1;
-
+    final rawPayload = _generateRandomData();
+    final String jsonStr = jsonEncode(rawPayload);
+    final String base64Payload = base64.encode(utf8.encode(jsonStr));
+    final String url = '$defaultTargetUrl/$base64Payload';
     try {
       final response = await _client
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final baseTarget = TargetLocation.fromJson(data);
-        return TargetLocation(
-          id: baseTarget.id,
-          latitude: baseTarget.latitude + offsetLat,
-          longitude: baseTarget.longitude + offsetLng,
-        );
+        return TargetLocation.fromJson(data);
       } else {
         throw Exception('Server returned status code ${response.statusCode}');
       }
     } catch (_) {
       try {
+        // First fallback: Load from local mock target JSON asset (offline-first capability)
         final String jsonString = await rootBundle.loadString(
           'assets/mock_target.json',
         );
         final Map<String, dynamic> data = jsonDecode(jsonString);
-        final baseTarget = TargetLocation.fromJson(data);
-        return TargetLocation(
-          id: baseTarget.id,
-          latitude: baseTarget.latitude + offsetLat,
-          longitude: baseTarget.longitude + offsetLng,
-        );
+        return TargetLocation.fromJson(data);
       } catch (assetError) {
+        // Second fallback: Hardcoded failsafe (used when running pure unit tests outside Flutter environment)
         return TargetLocation(
           id: '001_failsafe',
-          latitude: 1.265 + offsetLat,
-          longitude: 103.695 + offsetLng,
+          latitude: rawPayload['target_lat']!,
+          longitude: rawPayload['target_lng']!,
         );
       }
     }
