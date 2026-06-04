@@ -22,9 +22,7 @@ class LocationServices {
     };
   }
 
-  Future<TargetLocation> fetchTargetLocation({
-    String url = defaultTargetUrl,
-  }) async {
+  Future<TargetLocation> fetchTargetLocation() async {
     final rawPayload = _generateRandomData();
     final String jsonStr = jsonEncode(rawPayload);
     final String base64Payload = base64.encode(utf8.encode(jsonStr));
