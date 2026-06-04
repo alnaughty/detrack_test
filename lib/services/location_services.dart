@@ -29,9 +29,7 @@ class LocationServices {
     final String url = '$defaultTargetUrl/$base64Payload';
     debugPrint('Generated URL for target fetch: $url');
     try {
-      final response = await _client
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 3));
+      final response = await _client.get(Uri.parse(url));
       debugPrint(response.body + response.statusCode.toString());
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
