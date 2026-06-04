@@ -1,11 +1,14 @@
+import 'package:detrack_test/services/history_services.dart';
 import 'package:detrack_test/viewmodels/tracker_viewmodel.dart';
 import 'package:detrack_test/views/tracker_page.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  final trackerViewModel = TrackerViewModel();
+  final prefs = await SharedPreferences.getInstance();
+  final historyService = HistoryService(prefs);
+  final trackerViewModel = TrackerViewModel(historyService: historyService);
 
   runApp(MyApp(viewModel: trackerViewModel));
 }

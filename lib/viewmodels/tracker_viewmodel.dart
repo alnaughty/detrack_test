@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:detrack_test/models/location_reading.dart';
 import 'package:detrack_test/models/target_location.dart';
+import 'package:detrack_test/services/history_services.dart';
 import 'package:detrack_test/services/location_services.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 class TrackerViewModel extends ChangeNotifier {
   final LocationServices _locationService;
+  final HistoryService? _historyService;
   Timer? _timer;
 
   bool _isTracking = false;
@@ -17,9 +19,16 @@ class TrackerViewModel extends ChangeNotifier {
   int _filterLimit = 10; // Default limit
   String? _errorMessage;
 
-  // Constructor with optional Dependency Injection for unit testing
-  TrackerViewModel({LocationServices? locationService})
-    : _locationService = locationService ?? LocationServices();
+  TrackerViewModel({LocationServices? locationService, this._historyService})
+    : _locationService = locationService ?? LocationServices() {
+    _loadPersistedHistory();
+  }
+  void _loadPersistedHistory() {
+    final service = _historyService;
+    if (service != null) {
+      _allReadings.addAll(service.loadReadings());
+    }
+  }
 
   // Public Getters
   bool get isTracking => _isTracking;
@@ -114,6 +123,7 @@ class TrackerViewModel extends ChangeNotifier {
       // Insert at index 0 (newest reading is stored first)
       _allReadings.insert(0, reading);
       _errorMessage = null; // Clear any transient capture errors
+      _saveHistory();
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Location capture error: $e';
@@ -130,7 +140,22 @@ class TrackerViewModel extends ChangeNotifier {
   /// Clears all stored in-memory readings.
   void clearReadings() {
     _allReadings.clear();
+    _clearHistory();
     notifyListeners();
+  }
+
+  Future<void> _saveHistory() async {
+    final service = _historyService;
+    if (service != null) {
+      await service.saveReadings(_allReadings);
+    }
+  }
+
+  Future<void> _clearHistory() async {
+    final service = _historyService;
+    if (service != null) {
+      await service.clearReadings();
+    }
   }
 
   @override

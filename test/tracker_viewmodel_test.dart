@@ -1,8 +1,10 @@
 import 'package:detrack_test/models/target_location.dart';
+import 'package:detrack_test/services/history_services.dart';
 import 'package:detrack_test/services/location_services.dart';
 import 'package:detrack_test/viewmodels/tracker_viewmodel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockLocationService implements LocationServices {
   bool permissionGranted = true;
@@ -138,5 +140,28 @@ void main() {
         expect(viewModel.readings, hasLength(1));
       },
     );
+
+    test('Persists readings and restores them on initialization', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final historyService = HistoryService(prefs);
+
+      // Initialize viewmodel with persistence
+      final persistentViewModel = TrackerViewModel(
+        locationService: mockService,
+        historyService: historyService,
+      );
+      await persistentViewModel.toggleTracking(); // Capture 1 reading
+      expect(persistentViewModel.readings, hasLength(1));
+      // Re-create a new viewmodel mimicking app restart
+      final newViewModel = TrackerViewModel(
+        locationService: mockService,
+        historyService: historyService,
+      );
+
+      // History should be loaded automatically
+      expect(newViewModel.readings, hasLength(1));
+      expect(newViewModel.readings.first.latitude, 1.266);
+    });
   });
 }
