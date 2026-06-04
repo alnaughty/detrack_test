@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:detrack_test/models/target_location.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -28,18 +29,23 @@ class LocationServices {
     final String jsonStr = jsonEncode(rawPayload);
     final String base64Payload = base64.encode(utf8.encode(jsonStr));
     final String url = '$defaultTargetUrl/$base64Payload';
+    debugPrint('Generated URL for target fetch: $url');
     try {
       final response = await _client
           .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 3));
+      debugPrint(response.body + response.statusCode.toString());
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         return TargetLocation.fromJson(data);
       } else {
         throw Exception('Server returned status code ${response.statusCode}');
       }
-    } catch (_) {
+    } catch (e) {
       try {
+        debugPrint(
+          'Network request failed : $e, attempting to load target from local asset...',
+        );
         // First fallback: Load from local mock target JSON asset (offline-first capability)
         final String jsonString = await rootBundle.loadString(
           'assets/mock_target.json',
@@ -47,6 +53,7 @@ class LocationServices {
         final Map<String, dynamic> data = jsonDecode(jsonString);
         return TargetLocation.fromJson(data);
       } catch (assetError) {
+        debugPrint('Asset loading failed: $assetError');
         // Second fallback: Hardcoded failsafe (used when running pure unit tests outside Flutter environment)
         return TargetLocation(
           id: '001_failsafe',
